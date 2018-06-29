@@ -1,0 +1,268 @@
+= github-release-plugin-example
+
+== configuration
+
+.add plugin configuration in deploy phase:
+[source,xml]
+----
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>exec-maven-plugin</artifactId>
+      <version>1.6.0</version>
+      <executions>
+        <execution>
+          <id>compile-gradle</id>
+          <phase>initialize</phase>
+          <goals>
+            <goal>exec</goal>
+          </goals>
+        </execution>
+      </executions>
+      <configuration>
+        <executable>${gradle.executable}</executable>
+        <arguments>
+          <argument>clean</argument>
+          <argument>build</argument>
+        </arguments>
+      </configuration>
+    </plugin>
+
+    <plugin>
+      <groupId>de.jutzig</groupId>
+      <artifactId>github-release-plugin</artifactId>
+      <version>1.1.1</version>
+      <executions>
+        <execution>
+          <id>release</id>
+          <phase>deploy</phase>
+        </execution>
+      </executions>
+      <configuration>
+        <overwriteArtifact>true</overwriteArtifact>
+        <description>${project.artifactId} release</description>
+        <releaseName>v${project.version}</releaseName>
+        <tag>${project.version}</tag>
+        <fileSets>
+          <fileSet>
+            <directory>${project.basedir}/scripts</directory>
+            <includes>
+              <include>application*.bash</include>
+              <include>application*.cmd</include>
+            </includes>
+          </fileSet>
+          <fileSet>
+            <directory>${project.basedir}/modules/docker/postgres</directory>
+            <includes>
+              <include>docker-compose.yml</include>
+            </includes>
+          </fileSet>
+          <fileSet>
+            <directory>${project.basedir}/modules/apps/file-items-service/build/libs</directory>
+            <includes>
+              <include>*.jar</include>
+            </includes>
+          </fileSet>
+          <fileSet>
+            <directory>${project.basedir}/modules/apps/file-server/build/libs</directory>
+            <includes>
+              <include>*.jar</include>
+            </includes>
+          </fileSet>
+        </fileSets>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
+----
+
+.important: add to `pom.xml` file proper configurations (connection url proto must be https, not git if you are using username / password credentials):
+[source,xml]
+----
+<scm>
+  <url>https://github.com/daggerok/streaming-file-server.git</url>
+  <connection>scm:git:https://github.com/daggerok/streaming-file-server.git</connection>
+  <developerConnection>scm:git:git@github.com:daggerok/streaming-file-server.git</developerConnection>
+  <tag>HEAD</tag>
+</scm>
+----
+
+.finally update your `~/.m2/settings.xml` file: put here your github credentials for server `github`
+[source,xml]
+----
+<settings>
+  <servers>
+    <server>
+      <id>github</id>
+      <username>GITHUB_USERNAME</username>
+      <password>GITHUB_PASSWORD</password>
+    </server>
+  </servers>
+</settings>
+----
+      
+== usage
+
+.we need maven goal `de.jutzig:github-release-plugin:1.1.1:release`
+[source,bash]
+----
+./mvnw de.jutzig:github-release-plugin:1.1.1:release
+----
+
+== tips
+
+=== default goals
+
+.to simplify command just add default goal, so maven will execute it for you automatically
+[source,xml]
+----
+<defaultGoal>exec:exec de.jutzig:github-release-plugin:1.1.1:release</defaultGoal>
+----
+
+.now, for release you can just use maven wrapper with no arguments, like so:
+[source,bash]
+----
+./mvnw
+----
+
+=== override username / password on runtime
+
+.set username / password for publishing release to gituhb:
+[source,bash]
+----
+./mvnw -Dusername=ololo -Dpassword=trololo
+----
+
+=== draft release
+
+.to creates the release in draft state, run command:
+[source,bash]
+----
+./mvnw -Dgithub.draft=true
+----
+
+=== windows / unix profiles
+
+Lets assume for project build we are isong different commands / shell scripts
+for different systems, such as windows, linux, mac os x...
+
+.windows
+[source,cmd]
+----
+gradlew.bat clean build
+----
+
+.non windows (linux, mac, etc...)
+[source,bash]
+----
+./gradlew clean build
+----
+
+so before release we need build project with there commands depends on OS we are working.
+to do so we can introduse maven profiles and use proper scripts bor build refore release:
+
+.pom.xml
+[source,xml]
+----
+<build>
+  <plugins>
+    <plugin>
+      <groupId>org.codehaus.mojo</groupId>
+      <artifactId>exec-maven-plugin</artifactId>
+      <version>1.6.0</version>
+      <executions>
+        <execution>
+          <id>compile-gradle</id>
+          <phase>initialize</phase>
+          <goals>
+            <goal>exec</goal>
+          </goals>
+        </execution>
+      </executions>
+      <configuration>
+        <executable>${gradle.executable}</executable>
+        <arguments>
+          <argument>clean</argument>
+          <argument>build</argument>
+        </arguments>
+      </configuration>
+    </plugin>
+
+    <plugin>
+      <groupId>de.jutzig</groupId>
+      <artifactId>github-release-plugin</artifactId>
+      <version>1.1.1</version>
+      <executions>
+        <execution>
+          <id>release</id>
+          <phase>deploy</phase>
+        </execution>
+      </executions>
+      <configuration>
+        <overwriteArtifact>true</overwriteArtifact>
+        <description>${project.artifactId} release</description>
+        <releaseName>v${project.version}</releaseName>
+        <tag>${project.version}</tag>
+        <fileSets>
+          <fileSet>
+            <directory>${project.basedir}/scripts</directory>
+            <includes>
+              <include>application*.bash</include>
+              <include>application*.cmd</include>
+            </includes>
+          </fileSet>
+          <fileSet>
+            <directory>${project.basedir}/modules/docker/postgres</directory>
+            <includes>
+              <include>docker-compose.yml</include>
+            </includes>
+          </fileSet>
+          <fileSet>
+            <directory>${project.basedir}/modules/apps/file-items-service/build/libs</directory>
+            <includes>
+              <include>*.jar</include>
+            </includes>
+          </fileSet>
+          <fileSet>
+            <directory>${project.basedir}/modules/apps/file-server/build/libs</directory>
+            <includes>
+              <include>*.jar</include>
+            </includes>
+          </fileSet>
+        </fileSets>
+      </configuration>
+    </plugin>
+  </plugins>
+</build>
+
+<profiles>
+  <profile>
+    <id>win</id>
+    <activation>
+      <os>
+        <family>Windows</family>
+      </os>
+    </activation>
+    <properties>
+      <gradle.executable>gradlew.bat</gradle.executable>
+    </properties>
+  </profile>
+  <profile>
+    <id>nix</id>
+    <activation>
+      <os>
+        <family>unix</family>
+      </os>
+    </activation>
+    <properties>
+      <gradle.executable>./gradlew</gradle.executable>
+    </properties>
+  </profile>
+</profiles>
+----
+
+links:
+
+- link:https://github.com/jutzig/github-release-plugin[plugin home page]
+- link:https://github.com/daggerok/streaming-file-server/blob/master/pom.xml[real world usage example]
